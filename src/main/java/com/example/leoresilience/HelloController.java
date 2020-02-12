@@ -1,7 +1,9 @@
 package com.example.leoresilience;
 
+import feign.FeignException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
+import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -11,23 +13,23 @@ import java.util.function.Function;
 public class HelloController {
 
     @Autowired
-    private CircuitBreakerFactory circuitBreakerFactory;
-
-    @Autowired
     private HelloService helloService;
 
+
+    @CircuitBreaker(name = "hello", fallbackMethod = "fallback")
     @RequestMapping("/test-hello-api")
     public String testHelloResilience() {
-        return circuitBreakerFactory.create("hello").run(
-                helloService.getHello,
-                throwable -> fallbackMethod.apply(throwable)
-        );
+        return helloService.getHello.get();
     }
 
-    Function<Throwable, String> fallbackMethod = throwable -> {
-        System.out.println("Exception: " + throwable);
+    private String fallback (RuntimeException e) {
+        System.out.println("Exception: " + e);
         return "fallback from Resilience";
     };
 
+    private String fallback (FeignException e) {
+        System.out.println("FeignException: " + e);
+        return "fallback from FeignException";
+    };
 
 }
